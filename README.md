@@ -86,10 +86,29 @@ APP.V_APP_DATA (application-facing view)
 
 ## Application Integration
 
-Run locally:
+### Local setup
 
-pip install -r requirements.txt\
-streamlit run app/streamlit_app.py
+1. Clone the repo and go to the project root.
+2. Create and activate a virtual environment (recommended):
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate   # Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Add a `.env` in the project root with your Snowflake credentials (required: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`).
+
+5. Run the app:
+
+   ```bash
+   streamlit run app/streamlit_app.py
+   ```
 
 The application:
 

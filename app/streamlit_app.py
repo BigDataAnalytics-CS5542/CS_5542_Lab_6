@@ -1,4 +1,11 @@
 import os
+import sys
+
+# Ensure project root is on path so "scripts" can be imported
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 import time
 import pandas as pd
 import streamlit as st
@@ -6,7 +13,7 @@ import altair as alt
 from datetime import datetime
 from scripts.sf_connect import get_conn
 
-LOG_PATH = "logs/pipeline_logs.csv"
+LOG_PATH = os.path.join(_PROJECT_ROOT, "logs", "pipeline_logs.csv")
 
 def log_event(team: str, user: str, query_name: str, latency_ms: int, rows: int, error: str = ""):
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
