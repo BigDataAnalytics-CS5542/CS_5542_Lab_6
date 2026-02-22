@@ -8,18 +8,26 @@ CS5542 - Lab 5
 
 ### Member 1: Rohan Hashmi
 
-Responsibilities: - Snowflake database and schema design\
-- Table creation and staging configuration\
-- Implementation of CSV → Stage → COPY ingestion\
+**Responsibilities:**
+- Snowflake database and schema design
+- Table creation and staging configuration
+- Implementation of CSV → Stage → COPY ingestion
 - Validation of data load and record counts
+- Connection and environment setup (scripts, `.env`, README)
 
-Evidence (PR/commits): - SQL setup scripts\
-- Ingestion script implementation\
-- Data load verification commits
+**Scripts & SQL (implemented or updated):**
+- **`scripts/sf_connect.py`** — Central Snowflake connection: loads `.env`, normalizes account (strips `.snowflakecomputing.com`), supports `SNOWFLAKE_AUTHENTICATOR` (priority) and `SNOWFLAKE_MFA_CODE` (TOTP), consistent env variable handling.
+- **`scripts/test_connection.py`** — Quick connection test; prints current warehouse, database, schema.
+- **`scripts/run_sql_file.py`** — Runs a SQL file (semicolon-separated statements); prints result rows when available.
+- **`scripts/load_chunks_to_snowflake.py`** — Loads `data/chunks.csv` into Snowflake stage and `RAW.CHUNKS`.
+- **`scripts/export_kb_to_csv.py`** — Exports `data/processed/kb.jsonl` to `data/chunks.csv` for the load pipeline.
+- **`sql/00_verify_context.sql`** — Verifies connection context and chunk counts (RAW.CHUNKS, APP.CHUNKS_V).
+- **`sql/01_create_schema.sql`** — Creates RAW/APP schemas and `RAW.CHUNKS` table.
+- **`sql/02_create_app_view.sql`** — Creates `APP.CHUNKS_V` view over `RAW.CHUNKS`.
 
-Tested: - Table creation in Snowflake\
-- Successful dataset loading\
-- Record count verification queries
+**Evidence (PR/commits):** SQL setup and verification scripts; ingestion and export scripts; `sf_connect` auth and env handling; README and CONTRIBUTIONS updates; `.gitignore` and `.env.example`.
+
+**Tested:** Table and view creation in Snowflake; connection test and `run_sql_file` for SQL files; account normalization and external-browser vs password/MFA auth paths; chunk export and load pipeline.
 
 ------------------------------------------------------------------------
 

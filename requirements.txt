@@ -1,5 +1,24 @@
-snowflake-connector-python
-pandas
-python-dotenv
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# App & API
 streamlit
+fastapi
+uvicorn
+pydantic
+requests
+
+# Data & DB
+pandas
+numpy
+python-dotenv
+snowflake-connector-python
+
+# Viz
 altair
+
+# RAG / ML
+pypdf
+rank-bm25
+sentence-transformers
+scikit-learn
+torch
