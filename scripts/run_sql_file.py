@@ -10,7 +10,9 @@ def main():
     path = Path(sys.argv[1])
     sql = path.read_text(encoding="utf-8")
 
-    with get_conn() as conn:
+    totp = input("Enter TOTP code: ").strip()
+
+    with get_conn(totp) as conn:
         with conn.cursor() as cur:
             for stmt in [s.strip() for s in sql.split(";") if s.strip()]:
                 cur.execute(stmt)

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_conn():
+def get_conn(passcode=""):
     required = [
         "SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD",
         "SNOWFLAKE_WAREHOUSE", "SNOWFLAKE_DATABASE", "SNOWFLAKE_SCHEMA"
@@ -28,6 +28,9 @@ def get_conn():
     if authenticator:
         conn_kwargs["authenticator"] = authenticator
         conn_kwargs.pop("password", None)
+    elif passcode != "":
+        conn_kwargs["authenticator"] = "username_password_mfa"
+        conn_kwargs["passcode"] = passcode
     elif mfa_code:
         conn_kwargs["authenticator"] = "username_password_mfa"
         conn_kwargs["passcode"] = mfa_code
