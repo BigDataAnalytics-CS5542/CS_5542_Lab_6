@@ -11,7 +11,13 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables (including GEMINI_API_KEY)
+load_dotenv()
+
 from scripts.sf_connect import get_conn
+from backend.agent import create_agent_session
 
 LOG_PATH = os.path.join(_PROJECT_ROOT, "logs", "pipeline_logs.csv")
 
@@ -93,143 +99,152 @@ mfa_passcode_raw = st.text_input(
 )
 
 # ---------------------------------------------------------------------------
-# Filters (unchanged layout; limit still used by Q1 & Q3)
+# Tabs Setup
 # ---------------------------------------------------------------------------
-st.subheader("Filters")
-limit = st.slider("Limit rows", 10, 200, 50)
+tab_dash, tab_agent = st.tabs(["📊 Standard Dashboard", "🤖 AI Agent Chat"])
 
-# ---------------------------------------------------------------------------
-# Predefined queries against CS5542_LAB5_ROHAN_BLAKE_KENNETH
-# ---------------------------------------------------------------------------
+with tab_dash:
+    # ---------------------------------------------------------------------------
+    # Filters (unchanged layout; limit still used by Q1 & Q3)
+    # ---------------------------------------------------------------------------
+    st.subheader("Filters")
+    limit = st.slider("Limit rows", 10, 200, 50)
+    
+    # ---------------------------------------------------------------------------
+    # Predefined queries against CS5542_LAB5_ROHAN_BLAKE_KENNETH
+    # ---------------------------------------------------------------------------
+    
+    # Q1 — Aggregation: Average Token Count per Paper
+    # NOTE: No dedicated token-count column exists in RAW.CHUNKS; token count is
+    #       approximated as LENGTH(CHUNK_TEXT) (character count). If a tokeniser
+    #       column is added later, replace the expression below.
+    q1 = f"""
+    SELECT
+        DOC_ID,
+        SOURCE_FILE,
+        COUNT(*)                        AS TOTAL_CHUNKS,
+        AVG(LENGTH(CHUNK_TEXT))         AS AVG_CHUNK_LENGTH,
+        MIN(LENGTH(CHUNK_TEXT))         AS MIN_CHUNK_LENGTH,
+        MAX(LENGTH(CHUNK_TEXT))         AS MAX_CHUNK_LENGTH,
+        SUM(LENGTH(CHUNK_TEXT))         AS TOTAL_TEXT_LENGTH
+    FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
+    GROUP BY DOC_ID, SOURCE_FILE
+    ORDER BY TOTAL_CHUNKS DESC
+    LIMIT {limit};
+    """
+    
+    # Q2 — Join: List all Figures for Papers published in 2024
+    # NOTE: No explicit publication-date or figure-type column exists in the schema.
+    #       "Published in 2024" is inferred from SOURCE_FILE containing '2024',
+    #       and "Figures" are identified by CHUNK_TEXT containing the word 'Figure'.
+    #       Adjust the ILIKE patterns if your naming convention differs.
+    q2 = f"""
+    SELECT
+        DOC_ID,
+        SOURCE_FILE,
+        PAGE,
+        COUNT(*)                                          AS CHUNKS_ON_PAGE,
+        AVG(LENGTH(CHUNK_TEXT))                           AS AVG_CHUNK_LENGTH_ON_PAGE,
+        RANK() OVER (PARTITION BY DOC_ID ORDER BY COUNT(*) DESC) AS PAGE_DENSITY_RANK
+    FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
+    GROUP BY DOC_ID, SOURCE_FILE, PAGE
+    ORDER BY DOC_ID, PAGE_DENSITY_RANK
+    LIMIT {limit};
+    """
+    
+    # Q3 — Complex: Compare Performance Metrics across Papers (Rank by chunk density)
+    # NOTE: RAG metrics (r_at_10, p_at_5, etc.) are produced at query time and are
+    #       not stored in APP.CHUNKS_V. This query uses chunk count per paper as a
+    #       structural proxy and ranks papers accordingly. Wire in an actual metrics
+    #       table if/when one is persisted to Snowflake.
+    q3 = f"""
+    SELECT
+        DOC_ID,
+        SOURCE_FILE,
+        PAGE,
+        CHUNK_INDEX,
+        LENGTH(CHUNK_TEXT)      AS CHAR_COUNT,
+        CHUNK_TEXT
+    FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
+    WHERE LENGTH(CHUNK_TEXT) < 200
+    ORDER BY DOC_ID, PAGE, CHUNK_INDEX
+    LIMIT {limit};
+    """
+    
+    QUERY_LABELS = [
+        "Q1: Average Chunk Length and Total Chunks per Document",
+        "Q2: Chunk Density per Page across Documents",
+        "Q3: Short Chunks (Likely Noise or Headers) by Document",
+    ]
+    QUERY_MAP = {
+        QUERY_LABELS[0]: q1,
+        QUERY_LABELS[1]: q2,
+        QUERY_LABELS[2]: q3,
+    }
+    
+    choice = st.selectbox("Choose query", QUERY_LABELS)
+    sql = QUERY_MAP[choice]
+    
+    # ---------------------------------------------------------------------------
+    # Run button
+    # ---------------------------------------------------------------------------
+    if st.button("Run"):
+        try:
+            mfa_passcode=""
+            # Only use the passcode if it is exactly 6 numeric digits
+            mfa_passcode = mfa_passcode_raw.strip() if mfa_passcode_raw.strip().isdigit() and len(mfa_passcode_raw.strip()) == 6 else ""
+    
+            df, latency_ms = run_query(sql, passcode=mfa_passcode)
+            st.caption(f"Latency: {latency_ms} ms | Rows: {len(df)}")
+            st.dataframe(df, width='stretch')
+            log_event(team, user, choice, latency_ms, len(df), "")
+        except Exception as e:
+            st.error(str(e))
+            log_event(team, user, choice, 0, 0, str(e))
+    
+    # ---------------------------------------------------------------------------
+    # Logs preview (unchanged)
+    # ---------------------------------------------------------------------------
+    st.subheader("Logs preview")
+    if os.path.exists(LOG_PATH):
+        st.dataframe(pd.read_csv(LOG_PATH).tail(50), width='stretch')
+    else:
+        st.info("No logs yet. Run a query to generate logs.")
 
-# Q1 — Aggregation: Average Token Count per Paper
-# NOTE: No dedicated token-count column exists in RAW.CHUNKS; token count is
-#       approximated as LENGTH(CHUNK_TEXT) (character count). If a tokeniser
-#       column is added later, replace the expression below.
-q1 = f"""
-SELECT
-    DOC_ID,
-    SOURCE_FILE,
-    COUNT(*)                        AS TOTAL_CHUNKS,
-    AVG(LENGTH(CHUNK_TEXT))         AS AVG_CHUNK_LENGTH,
-    MIN(LENGTH(CHUNK_TEXT))         AS MIN_CHUNK_LENGTH,
-    MAX(LENGTH(CHUNK_TEXT))         AS MAX_CHUNK_LENGTH,
-    SUM(LENGTH(CHUNK_TEXT))         AS TOTAL_TEXT_LENGTH
-FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
-GROUP BY DOC_ID, SOURCE_FILE
-ORDER BY TOTAL_CHUNKS DESC
-LIMIT {limit};
-"""
-
-# Q2 — Join: List all Figures for Papers published in 2024
-# NOTE: No explicit publication-date or figure-type column exists in the schema.
-#       "Published in 2024" is inferred from SOURCE_FILE containing '2024',
-#       and "Figures" are identified by CHUNK_TEXT containing the word 'Figure'.
-#       Adjust the ILIKE patterns if your naming convention differs.
-q2 = f"""
-SELECT
-    DOC_ID,
-    SOURCE_FILE,
-    PAGE,
-    COUNT(*)                                          AS CHUNKS_ON_PAGE,
-    AVG(LENGTH(CHUNK_TEXT))                           AS AVG_CHUNK_LENGTH_ON_PAGE,
-    RANK() OVER (PARTITION BY DOC_ID ORDER BY COUNT(*) DESC) AS PAGE_DENSITY_RANK
-FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
-GROUP BY DOC_ID, SOURCE_FILE, PAGE
-ORDER BY DOC_ID, PAGE_DENSITY_RANK
-LIMIT {limit};
-"""
-
-# Q3 — Complex: Compare Performance Metrics across Papers (Rank by chunk density)
-# NOTE: RAG metrics (r_at_10, p_at_5, etc.) are produced at query time and are
-#       not stored in APP.CHUNKS_V. This query uses chunk count per paper as a
-#       structural proxy and ranks papers accordingly. Wire in an actual metrics
-#       table if/when one is persisted to Snowflake.
-q3 = f"""
-SELECT
-    DOC_ID,
-    SOURCE_FILE,
-    PAGE,
-    CHUNK_INDEX,
-    LENGTH(CHUNK_TEXT)      AS CHAR_COUNT,
-    CHUNK_TEXT
-FROM CS5542_LAB5_ROHAN_BLAKE_KENNETH.APP.CHUNKS_V
-WHERE LENGTH(CHUNK_TEXT) < 200
-ORDER BY DOC_ID, PAGE, CHUNK_INDEX
-LIMIT {limit};
-"""
-
-QUERY_LABELS = [
-    "Q1: Average Chunk Length and Total Chunks per Document",
-    "Q2: Chunk Density per Page across Documents",
-    "Q3: Short Chunks (Likely Noise or Headers) by Document",
-]
-QUERY_MAP = {
-    QUERY_LABELS[0]: q1,
-    QUERY_LABELS[1]: q2,
-    QUERY_LABELS[2]: q3,
-}
-
-choice = st.selectbox("Choose query", QUERY_LABELS)
-sql = QUERY_MAP[choice]
-
-# ---------------------------------------------------------------------------
-# Run button
-# ---------------------------------------------------------------------------
-if st.button("Run"):
-    # --- Predefined query ---
-    try:
-        mfa_passcode=""
-        # Only use the passcode if it is exactly 6 numeric digits
-        mfa_passcode = mfa_passcode_raw.strip() if mfa_passcode_raw.strip().isdigit() and len(mfa_passcode_raw.strip()) == 6 else ""
-
-        df, latency_ms = run_query(sql, passcode=mfa_passcode)
-        st.caption(f"Latency: {latency_ms} ms | Rows: {len(df)}")
-        st.dataframe(df, width='stretch')
-        log_event(team, user, choice, latency_ms, len(df), "")
-    except Exception as e:
-        st.error(str(e))
-        log_event(team, user, choice, 0, 0, str(e))
-
-    # --- RAG Evidence Retrieval ---
-    # Reads the last RAG result stored in session state by the existing RAG
-    # pipeline (expected key: "rag_result"). If none is present the section
-    # is silently skipped — no RAG question box is added here.
-    # st.subheader("RAG Evidence Chunks")
-    # rag_result = st.session_state.get("rag_result")
-
-    # if rag_result is None:
-    #     st.info("No RAG result in session. Run the RAG pipeline first to populate evidence.")
-    # else:
-    #     evidence = rag_result.get("evidence", [])
-    #     if not evidence:
-    #         st.info("RAG result contains no evidence entries.")
-    #     else:
-    #         # Extract evidence_ids in ranked order (list is already ranked by pipeline)
-    #         ranked_ids = [e["evidence_id"] for e in evidence if e.get("evidence_id")]
-
-    #         st.caption(
-    #             f"Question: *{rag_result.get('question', 'N/A')}* | "
-    #             f"Faithfulness: {'✅' if rag_result.get('faithfulness_pass') else '❌'} | "
-    #             f"RAG Latency: {rag_result.get('latency_ms', 'N/A')} ms"
-    #         )
-
-    #         try:
-    #             evidence_df = fetch_evidence_chunks(ranked_ids, passcode=mfa_passcode)
-    #             if evidence_df.empty:
-    #                 st.warning("No matching chunks found in APP.CHUNKS_V for the returned evidence IDs.")
-    #             else:
-    #                 st.dataframe(evidence_df, width='stretch')
-    #                 log_event(team, user, "RAG Evidence Fetch", 0, len(evidence_df), "")
-    #         except Exception as e:
-    #             st.error(f"Evidence fetch failed: {e}")
-    #             log_event(team, user, "RAG Evidence Fetch", 0, 0, str(e))
-
-# ---------------------------------------------------------------------------
-# Logs preview (unchanged)
-# ---------------------------------------------------------------------------
-st.subheader("Logs preview")
-if os.path.exists(LOG_PATH):
-    st.dataframe(pd.read_csv(LOG_PATH).tail(50), width='stretch')
-else:
-    st.info("No logs yet. Run a query to generate logs.")
+with tab_agent:
+    st.subheader("Data & Knowledge Base Agent")
+    st.markdown("Ask questions about the database statistics or the research papers in the Knowledge Base.")
+    
+    # Initialize chat session
+    if "agent_chat" not in st.session_state:
+        try:
+            st.session_state.agent_chat = create_agent_session()
+            st.session_state.messages = []
+        except Exception as e:
+            st.error(f"Failed to initialize Agent: {str(e)}")
+            st.info("Are you missing the GEMINI_API_KEY in your .env file?")
+            st.stop()
+            
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            
+    # React to user input
+    if prompt := st.chat_input("Ask me anything about the metrics or papers..."):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            with st.spinner("Agent is reasoning and querying data..."):
+                try:
+                    # Pass the message to the Gemini agent. Tool calling happens automatically inside SDK.
+                    response = st.session_state.agent_chat.send_message(prompt)
+                    
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as e:
+                    st.error(f"Agent encountered an error: {str(e)}")

@@ -1,56 +1,46 @@
-# CS 5542 - Week 5 Snowflake Integration
+# CS 5542 - Week 6 AI Agent Integration
 
-## End-to-End Cloud Data Pipeline
+## End-to-End Cloud Data Pipeline with AI Agent
 
-This project extends our Lab 4 RAG-based system into a structured,
-Snowflake-backed cloud data pipeline.
+This project extends our Lab 5 Snowflake-backed cloud data pipeline into a fully functional Agentic system.
 
 ### Final Architecture
 
-Data → Snowflake Stage + COPY → Tables & Views → SQL Queries → Streamlit
-App → Monitoring Logs
+Structured Output / Document Parsing → Snowflake → **Google GenAI Agent** (Tool Calling) → Streamlit Chat Interface
 
-This lab demonstrates reproducible ingestion, warehouse-backed
-analytics, application integration, and structured monitoring.
+This lab demonstrates integrating an LLM capable of complex reasoning and routing questions between structured SQL queries and unstructured RAG knowledge base searches.
 
 ------------------------------------------------------------------------
 
 ## Repository Structure
 
 ```
+/backend/
+  agent.py               # AI Agent execution loop, system prompt, and Chat integration
+  tools.py               # Explicit tools for the agent (Snowflake SQL, Schema Lookup, Vector Search)
+  rag_pipeline.py        # Vector/BM25 Hybrid retrieval engine
+
 /sql/                    # Snowflake SQL (run in order or via run_sql_file.py)
-  00_verify_context.sql  # Verify connection, show warehouse/DB/schema and chunk counts
   01_create_schema.sql   # Create RAW + APP schemas and RAW.CHUNKS table
   02_create_app_view.sql # Create APP.CHUNKS_V view over RAW.CHUNKS
-  03_queries.sql        # Sample analytics (EVENTS/USERS aggregation, time filter, join)
-
+  
 /scripts/
   sf_connect.py          # Central Snowflake connection (env, authenticator, MFA support)
-  test_connection.py    # Quick connection test (warehouse, database, schema)
-  run_sql_file.py        # Run a SQL file (semicolon-separated statements); prints results
   load_chunks_to_snowflake.py  # Load data/chunks.csv → Snowflake stage → RAW.CHUNKS
-  export_kb_to_csv.py    # Export data/processed/kb.jsonl → data/chunks.csv
-
+  
 /app/
-  streamlit_app.py       # Streamlit dashboard (queries, filters, logs)
-
-/data/
-  chunks.csv             # Chunk data for loading (from export_kb_to_csv.py)
-  processed/kb.jsonl     # Source for export
-/logs/
-  pipeline_logs.csv      # Query usage and latency logs
-README.md, CONTRIBUTIONS.md
+  streamlit_app.py       # Dual-tab Streamlit dashboard (Metrics + AI Agent Chat)
 ```
 
 ------------------------------------------------------------------------
 
-## Week 5 Scope (≈50% of Project)
+## Week 6 Scope (≈60% of Project)
 
 | Item | Included This Week | Deferred |
 |------|--------------------|----------|
-| Dataset Subset | ~50% of project documents loaded into Snowflake | Remaining documents |
-| Structured Metadata | Document + chunk metadata tables | Full embedding storage |
-| Analytics Queries | Aggregation, time-based, and join queries | Advanced optimization |
+| Agent Tools | Explicit Python tools for Database lookup and RAG search | Agent graph or long-term dynamic memory |
+| Conversational UI | Streamlit integrated chat holding session history | Multi-agent collaboration UX |
+| Agent Reasoning | LLM executing tools sequentially (e.g., Schema lookup -> Write SQL) | User auth/RBA |
 
 ------------------------------------------------------------------------
 
@@ -159,62 +149,16 @@ Minimum 10 entries recorded.
 
 ## Team Responsibilities
 
-See **CONTRIBUTIONS.md** for detailed evidence and testing notes.
-
-### Rohan Hashmi — Snowflake & Data Engineering
-
-- Designed database, schemas, and tables (RAW, APP, RAW.CHUNKS)
-- Implemented staging and COPY ingestion (`load_chunks_to_snowflake.py`), export pipeline (`export_kb_to_csv.py`)
-- Connection and env: `sf_connect.py` (account normalization, authenticator vs MFA), `test_connection.py`, `run_sql_file.py`
-- SQL setup/verification: `00_verify_context.sql`, `01_create_schema.sql`, `02_create_app_view.sql`
-
-### Blake Simpson — SQL & Analytics Layer
-
-- Designed and implemented required SQL queries (aggregation, time-based, join)
-- Created application-facing views
-- Query validation and performance testing
-
-### Kenneth Kakie — Application & Monitoring
-
-- Streamlit integration with Snowflake backend
-- Dynamic query execution, latency and row-count metrics
-- Pipeline logging (`pipeline_logs.csv`), end-to-end verification
-
-------------------------------------------------------------------------
-
-## Extensions Completed
-
--   Structured multi-table join analytics\
--   Application-level query performance metrics\
--   Enhanced monitoring and structured logging
+Please see **`CONTRIBUTIONS.md`** for detailed evidence and testing notes for Lab 6 AI Agent Integration.
 
 ------------------------------------------------------------------------
 
 ## Demo Video
 
-[\\[Insert Demo Link Here\\]](https://umsystem.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=c298bdba-5cba-4a82-9fad-b3fc0050cc1a)
+[Insert Lab 6 Demo Link Here]
 
 ------------------------------------------------------------------------
 
-## Pipeline Diagram
+## Screenshots & Architecture Diagram
 
-![Pipeline Diagram](image.png)
-
-------------------------------------------------------------------------
-
-## Screenshots
-
-![Enterable fields](image-1.png)
-
-![Query w/ row limiting](image-3.png)
-
-![Logs](image-4.png)
-
-------------------------------------------------------------------------
-
-## Reflection
-
-This lab transformed our project into a structured cloud-backed system
-by separating storage, transformation, and application layers.
-Integrating Snowflake improved reproducibility, scalability, and
-production-readiness of our architecture.
+*(Add screenshots of your Antigravity setup, the new Agent Interface, and any updated architecture diagrams here before final submission)*

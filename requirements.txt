@@ -6,6 +6,7 @@ fastapi
 uvicorn
 pydantic
 requests
+google-genai
 
 # Data & DB
 pandas

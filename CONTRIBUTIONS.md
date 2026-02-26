@@ -1,70 +1,54 @@
-# Week 5 Contributions
+# Week 6 Contributions: AI Agent Integration
 
 ## Project Title:
-
-CS5542 - Lab 5
+CS5542 - Lab 6 (Academic RAG Pipeline Agent)
 
 ------------------------------------------------------------------------
 
 ### Member 1: Rohan Hashmi
 
 **Responsibilities:**
-- Snowflake database and schema design
-- Table creation and staging configuration
-- Implementation of CSV → Stage → COPY ingestion
-- Validation of data load and record counts
-- Connection and environment setup (scripts, `.env`, README)
+- AI Agent Pipeline and Core Execution Loop
+- Google GenAI SDK integration (`backend/agent.py`)
+- Formulation of the LLM System Prompt dictating Tool Selection policies
+- Error handling integration ensuring seamless LLM re-attempts
 
-**Scripts & SQL (implemented or updated):**
-- **`scripts/sf_connect.py`** — Central Snowflake connection: loads `.env`, normalizes account (strips `.snowflakecomputing.com`), supports `SNOWFLAKE_AUTHENTICATOR` (priority) and `SNOWFLAKE_MFA_CODE` (TOTP), consistent env variable handling.
-- **`scripts/test_connection.py`** — Quick connection test; prints current warehouse, database, schema.
-- **`scripts/run_sql_file.py`** — Runs a SQL file (semicolon-separated statements); prints result rows when available.
-- **`scripts/load_chunks_to_snowflake.py`** — Loads `data/chunks.csv` into Snowflake stage and `RAW.CHUNKS`.
-- **`scripts/export_kb_to_csv.py`** — Exports `data/processed/kb.jsonl` to `data/chunks.csv` for the load pipeline.
-- **`sql/00_verify_context.sql`** — Verifies connection context and chunk counts (RAW.CHUNKS, APP.CHUNKS_V).
-- **`sql/01_create_schema.sql`** — Creates RAW/APP schemas and `RAW.CHUNKS` table.
-- **`sql/02_create_app_view.sql`** — Creates `APP.CHUNKS_V` view over `RAW.CHUNKS`.
+**Evidence (PR/commits):**
+- Implementation of `backend/agent.py`, managing `client.chats.create` states and tool integration.
+- Configured `.env` requirements and updated documentation for API setup.
 
-**Evidence (PR/commits):** SQL setup and verification scripts; ingestion and export scripts; `sf_connect` auth and env handling; README and CONTRIBUTIONS updates; `.gitignore` and `.env.example`.
-
-**Tested:** Table and view creation in Snowflake; connection test and `run_sql_file` for SQL files; account normalization and external-browser vs password/MFA auth paths; chunk export and load pipeline.
+**Tested:**
+- Agent loop execution without failure; verified dynamic tool calling given specific prompts.
 
 ------------------------------------------------------------------------
 
 ### Member 2: Blake Simpson
 
 **Responsibilities:**
-- Designed and wrote three analytical SQL queries in `sql/03_queries.sql` targeting `APP.CHUNKS_V`
-- Q1 (Aggregation): Average word count per paper using `ARRAY_SIZE(SPLIT(CHUNK_TEXT, ' '))` as token proxy
-- Q2 (Join): Enriched all chunks with their paper's intro text via a CTE self-join on `DOC_ID`
-- Q3 (Complex): Ranked papers by total word volume using `RANK()` and `PERCENT_RANK()` window functions
-- Created `APP.DOC_SUMMARY` view (Extension) pre-aggregating per-paper chunk stats and content rank
-- Built Snowflake Dashboard "Lab 5" with 3 chart tiles visualizing each query result
+- Agent Tool Interfaces and Python Callable Abstractions
+- Wrote `backend/tools.py` pulling logic from Lab 4 & 5
+- Configured three primary tools: `run_snowflake_query`, `get_database_schema`, and `search_knowledge_base`
+- Developed the three Evaluation Scenarios (Simple, Medium, Complex)
+- Recorded the Final Presentation and Demo Video showcasing the AI system
 
 **Evidence (PR/commits):**
-- `sql/03_queries.sql` — rewritten for actual schema (`APP.CHUNKS_V`, no TOKEN_COUNT column)
-- `APP.DOC_SUMMARY` view created in Snowflake
-- Snowflake Dashboard "Lab 5" (3 bar chart tiles)
+- Implementation of `backend/tools.py` with typed arguments and verbose docstrings.
+- Drafting of `task4_evaluation_report.md` metrics table.
 
 **Tested:**
-- All 3 queries verified running in Snowflake worksheet against live data (416 rows)
-- `APP.DOC_SUMMARY` view created and queryable
-- Dashboard tiles rendering correct bar charts
+- Invoked `run_snowflake_query()` offline to confirm parsing of DataFrame into JSON format.
 
 ------------------------------------------------------------------------
 
 ### Member 3: Kenneth Kakie
 
-Responsibilities: - Streamlit integration with Snowflake\
-- Secure environment configuration handling\
-- Dynamic query execution\
-- Latency and row-count metrics display\
-- pipeline_logs.csv implementation
+**Responsibilities:**
+- Front-End Chat Application Design
+- Refactored `app/streamlit_app.py` implementing a tab-based UI separating Lab 5 components from the new chat interface.
+- Programmed conversation history (`st.session_state.messages`) and interactive visual cues (`st.chat_message`, `st.spinner`).
 
-Evidence (PR/commits): - Streamlit connection code\
-- Logging implementation\
-- End-to-end integration commits
+**Evidence (PR/commits):**
+- Updated `streamlit_app.py` adding full chat support with continuous connection state to `agent.py`.
 
-Tested: - Application-to-database connectivity\
-- Query execution and result rendering\
-- Logging functionality and file creation
+**Tested:**
+- Launched Streamlit locally and tested inputs, verifying correct UI display of agent thinking and markdown responses.
