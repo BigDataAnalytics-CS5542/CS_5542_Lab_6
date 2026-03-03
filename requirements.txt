@@ -1,25 +1,30 @@
---extra-index-url https://download.pytorch.org/whl/cpu
+# Web & API
+streamlit>=1.30.0
+fastapi>=0.109.2
+uvicorn>=0.27.0
 
-# App & API
-streamlit
-fastapi
-uvicorn
-pydantic
-requests
-google-genai
+# Snowflake
+snowflake-snowpark-python>=1.12.0
 
-# Data & DB
-pandas
-numpy
-python-dotenv
-snowflake-connector-python
+# Data & ML
+pandas>=2.1.0
+numpy>=1.24.0
+scipy>=1.11.0
+sentence-transformers>=2.2.2
+datasets>=2.14.0
+pyarrow>=14.0.0
 
-# Viz
-altair
+# NLP / Knowledge Graph
+spacy>=3.7.0,<3.9.0
+scispacy>=0.6.0
+https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
 
-# RAG / ML
-pypdf
-rank-bm25
-sentence-transformers
-scikit-learn
-torch
+# LLM
+huggingface_hub>=0.20.0
+langchain>=0.1.0
+langchain-openai>=0.0.5
+
+# Utilities
+python-dotenv>=1.0.1
+tqdm>=4.66.0
+pytest>=8.0.0

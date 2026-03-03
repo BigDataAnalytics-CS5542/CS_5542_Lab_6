@@ -1,26 +1,64 @@
-# Virtual environment
+# Environment
 venv/
 .venv/
 env/
-
-# Environment variables (often contain secrets)
 .env
-.env.local
+data/checkpoints/*.parquet
+data/checkpoints/
 
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
+*.so
 .Python
-*.egg-info/
-.eggs/
-dist/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# IDE / OS
+# IDE
 .idea/
 .vscode/
-.DS_Store
+*.swp
+*.swo
+*~
 
-# Logs (optional: remove logs/ if you want to track pipeline_logs.csv)
-# logs/
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML / NLP caches
+.cache/
+*.pt
+*.bin
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Snowflake
+snowflake_connection.json
+
+# Logs
+*.log
+logs/

@@ -1,164 +1,193 @@
-# CS 5542 - Week 6 AI Agent Integration
+# CS 5542 – Lab 6: AI Agent Integration
+### Snowflake-Centered Personalized Research Assistant
 
-## End-to-End Cloud Data Pipeline with AI Agent
+An AI agent that answers natural language questions about scientific literature using Retrieval-Augmented Generation, Knowledge Graphs, and tool-calling over a Snowflake data warehouse.
 
-This project extends our Lab 5 Snowflake-backed cloud data pipeline into a fully functional Agentic system.
+---
 
-### Final Architecture
+## Team
+| Name | Role | GitHub |
+|---|---|---|
+| Rohan Ashraf Hashmi | Engineer 1 — Data, Ingestion & Agent | @rohanhashmi2 |
+| Kenneth Kakie | Engineer 2 — Backend & Retrieval | @kenneth-github |
+| Blake Simpson | Engineer 3 — Frontend & Evaluation | @blake-github |
 
-Structured Output / Document Parsing → Snowflake → **Google GenAI Agent** (Tool Calling) → Streamlit Chat Interface
+---
 
-This lab demonstrates integrating an LLM capable of complex reasoning and routing questions between structured SQL queries and unstructured RAG knowledge base searches.
+## What This Does
 
-------------------------------------------------------------------------
+A user asks a question like *"What are kernel methods used for?"*
 
-## Repository Structure
+The agent:
+1. Searches 35,349 text chunks from 1,000 arXiv papers using vector similarity
+2. Optionally queries a knowledge graph of 188,123 scientific entities
+3. Feeds retrieved chunks to Llama 3.2 to generate a grounded answer with citations
+4. Returns the answer, citations, tools used, and latency
 
+---
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    A[User] --> B[Streamlit UI\nport 3000]
+    B --> C[FastAPI Backend\nport 3001]
+    C --> D[ResearchAgent\nagent.py]
+    D --> E[search_papers\nvector search]
+    D --> F[search_knowledge_graph\nentity lookup]
+    D --> G[summarize_context\nLlama 3.2]
+    E --> H[Snowflake\nRAW.CHUNKS + GRAPH tables]
+    F --> H
+    G --> I[Answer + Citations + Tools Used]
+    I --> B
 ```
-/backend/
-  agent.py               # AI Agent execution loop, system prompt, and Chat integration
-  tools.py               # Explicit tools for the agent (Snowflake SQL, Schema Lookup, Vector Search)
-  rag_pipeline.py        # Vector/BM25 Hybrid retrieval engine
 
-/sql/                    # Snowflake SQL (run in order or via run_sql_file.py)
-  01_create_schema.sql   # Create RAW + APP schemas and RAW.CHUNKS table
-  02_create_app_view.sql # Create APP.CHUNKS_V view over RAW.CHUNKS
-  
-/scripts/
-  sf_connect.py          # Central Snowflake connection (env, authenticator, MFA support)
-  load_chunks_to_snowflake.py  # Load data/chunks.csv → Snowflake stage → RAW.CHUNKS
-  
-/app/
-  streamlit_app.py       # Dual-tab Streamlit dashboard (Metrics + AI Agent Chat)
-```
+---
 
-------------------------------------------------------------------------
+## Quickstart
 
-## Week 6 Scope (≈60% of Project)
-
-| Item | Included This Week | Deferred |
-|------|--------------------|----------|
-| Agent Tools | Explicit Python tools for Database lookup and RAG search | Agent graph or long-term dynamic memory |
-| Conversational UI | Streamlit integrated chat holding session history | Multi-agent collaboration UX |
-| Agent Reasoning | LLM executing tools sequentially (e.g., Schema lookup -> Write SQL) | User auth/RBA |
-
-------------------------------------------------------------------------
-
-## Snowflake Setup
-
-Database/warehouse/schema are configured via `.env` (see Local setup below).
-
-**Run SQL in order** (from project root, with venv activated and `.env` set):
-
+### 1. Clone and install
 ```bash
-python scripts/run_sql_file.py sql/01_create_schema.sql
-python scripts/run_sql_file.py sql/02_create_app_view.sql
+git clone <repo-url>
+cd cs5542-lab6
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-**Verify connection and context:**
-
+### 2. Configure .env
 ```bash
-python scripts/test_connection.py
-python scripts/run_sql_file.py sql/00_verify_context.sql
+cp .env.example .env
 ```
 
-------------------------------------------------------------------------
+```
+SNOWFLAKE_ACCOUNT=your_account
+SNOWFLAKE_USER=your_username
+SNOWFLAKE_PASSWORD=your_password
+SNOWFLAKE_ROLE=your_role
+SNOWFLAKE_WAREHOUSE=ROHAN_BLAKE_KENNETH_WH
+SNOWFLAKE_DATABASE=CS5542_PROJECT_ROHAN_BLAKE_KENNETH
+SNOWFLAKE_SCHEMA=RAW
+HF_TOKEN=your_huggingface_token
+```
 
-## Data Loading
+> Data is already in Snowflake. Teammates do not need to run ingestion — just configure .env and run the agent or backend directly.
 
-**Chunk pipeline (RAG → Snowflake):**
+### 3. Run the agent (CLI)
+```bash
+python agent.py
+```
+Prompts for Snowflake MFA once, pre-fetches all chunks, then accepts questions interactively.
 
-1. Export knowledge base to CSV: `python scripts/export_kb_to_csv.py` (reads `data/processed/kb.jsonl`, writes `data/chunks.csv`).
-2. Load into Snowflake: `python scripts/load_chunks_to_snowflake.py` (stages and copies into `RAW.CHUNKS`).
+### 4. Start backend
+```bash
+uvicorn backend.app:app --reload --port 3001
+```
 
-**Verification:** run `sql/00_verify_context.sql` or query `RAW.CHUNKS` / `APP.CHUNKS_V` in Snowflake.
+### 5. Start frontend
+```bash
+streamlit run frontend/app.py --server.port 3000
+```
 
-------------------------------------------------------------------------
+---
 
-## SQL & Transformation Layer
+## Agent Tools
 
-Implemented:
+| Tool | Description |
+|---|---|
+| `search_papers` | Vector similarity search over APP.CHUNKS_V (768-dim cosine similarity) |
+| `get_paper_details` | Fetch full paper metadata from RAW.PAPERS by paper_id |
+| `search_knowledge_graph` | Entity + relation lookup in GRAPH tables via scispaCy NER |
+| `summarize_context` | Llama 3.2 generates grounded answer from retrieved chunks with citations |
 
-1.  Aggregation query (GROUP BY analytics)\
-2.  Time-based filtering query\
-3.  Join across multiple tables
+### Example Session
+```
+You: What are kernel methods used for?
 
-Created view:
+[Agent] Iteration 1...
+  [Tool] Calling search_papers(['query', 'top_k'])
+  [Tool] search_papers → top score: 0.7764
+[Agent] Calling summarize_context with retrieved chunks...
+[Agent] Done in 9392ms | Tools used: ['search_papers', 'summarize_context']
 
-APP.V_APP_DATA (application-facing view)
+Answer:
+Kernel methods are used for classification, regression,
+and model selection [1].
 
-------------------------------------------------------------------------
+Citations (5):
+  [1] arXiv Paper arxiv_000101 | body | score=0.776
+  [2] arXiv Paper arxiv_000101 | body | score=0.706
+```
 
-## Application Integration
+### Suggested Queries
+- "What are kernel methods used for?"
+- "What concepts are related to regression?"
+- "How do additive models reduce dimensionality?"
+- "What is a reproducing kernel Hilbert space?"
+- "What methods are used for quantile regression?"
 
-### Local setup
+---
 
-1. Clone the repo and go to the project root.
-2. Create and activate a virtual environment (recommended):
+## Project Structure
+```
+CS_5542_LAB_6/
+├── agent.py                       # ResearchAgent + CLI mode
+├── tools.py                       # 4 agent-callable tool functions
+├── tool_schemas.py                # OpenAI-compatible schemas + TOOL_FUNCTIONS
+├── task1_antigravity_report.md    # Cursor IDE analysis report
+├── task4_evaluation_report.md     # Agent evaluation scenarios (Kenneth)
+├── data/
+│   ├── config.py                  # Central config
+│   └── ingestion.py               # 6-stage Snowflake ingestion pipeline
+├── scripts/
+│   ├── sf_connect.py              # Snowflake MFA-aware connection
+│   └── run_sql_file.py            # SQL file runner
+├── sql/
+│   └── 01_create_schema.sql       # Full Snowflake schema
+├── backend/
+│   ├── app.py                     # FastAPI (port 3001)
+│   └── retrieval.py               # Vector + graph retrieval
+├── frontend/
+│   └── app.py                     # Streamlit agent chat UI (port 3000)
+├── evaluation/
+│   └── evaluate.py                # Evaluation harness
+├── docs/
+│   └── cursor_screenshot.png      # Cursor IDE screenshot
+├── requirements.txt
+├── .env.example
+├── CONTRIBUTIONS.md
+├── TEAM_PLAN.md
+└── README.md
+```
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate   # Windows: venv\Scripts\activate
-   ```
+---
 
-3. Install dependencies:
+## Ingestion Pipeline
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+| Stage | Output |
+|---|---|
+| 1. Load | 1,000 arXiv papers, cleaned text |
+| 2. Chunk | 35,349 chunks (200 words, 30 word overlap) |
+| 3. Embed | 768-dim vectors (all-mpnet-base-v2, L2-normalized) |
+| 4. KG Extract | 188,123 entities, 25M+ CO_OCCURS edges |
+| 5. Upload | All Snowflake tables populated |
+| 6. Verify | Row count validation |
 
-4. **Environment variables** — Copy `.env.example` to `.env` in the project root and set:
+To re-run ingestion from scratch:
+```bash
+python data/ingestion.py
+# ~1 hour for 1,000 papers
+# Prompts for MFA before Snowflake upload
+```
 
-   **Required:** `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`
-
-   **Optional:**  
-   - `SNOWFLAKE_AUTHENTICATOR` — e.g. `externalbrowser` for SSO (takes priority; omit for password-only).  
-   - `SNOWFLAKE_MFA_CODE` — current 6-digit TOTP when MFA is required (use with password, not with externalbrowser).  
-   - `SNOWFLAKE_ROLE` — role name if needed.
-
-   Use the account identifier only in `SNOWFLAKE_ACCOUNT` (e.g. `xy12345` or `org-account`), not the full `.snowflakecomputing.com` host.
-
-5. Run the app:
-
-   ```bash
-   streamlit run app/streamlit_app.py
-   ```
-
-The application:
-
--   Connects securely to Snowflake\
--   Executes parameterized SQL queries\
--   Displays query results\
--   Shows latency and returned row count\
--   Logs usage to pipeline_logs.csv
-
-------------------------------------------------------------------------
-
-## Monitoring
-
-Each query logs:
-
--   timestamp\
--   query/feature used\
--   latency\
--   returned record count
-
-Minimum 10 entries recorded.
-
-------------------------------------------------------------------------
-
-## Team Responsibilities
-
-Please see **`CONTRIBUTIONS.md`** for detailed evidence and testing notes for Lab 6 AI Agent Integration.
-
-------------------------------------------------------------------------
+---
 
 ## Demo Video
 
-[Insert Lab 6 Demo Link Here]
+*Link to be added — see task4_evaluation_report.md for evaluation scenarios*
 
-------------------------------------------------------------------------
+---
 
-## Screenshots & Architecture Diagram
+## Individual Contributions
 
-*(Add screenshots of your Antigravity setup, the new Agent Interface, and any updated architecture diagrams here before final submission)*
+See [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for full breakdown.
