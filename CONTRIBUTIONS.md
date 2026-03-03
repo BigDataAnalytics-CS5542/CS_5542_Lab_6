@@ -1,54 +1,25 @@
-# Week 6 Contributions: AI Agent Integration
+## CS 5542 – Lab 6: AI Agent Integration
 
-## Project Title:
-CS5542 - Lab 6 (Academic RAG Pipeline Agent)
+| Member | Role |
+|---|---|---|
+| Rohan Ashraf Hashmi | Engineer 1 — Agent & Tools |
+| Kenneth Kakie | Engineer 2 — Evaluation & Demo |
+| Blake Simpson | Engineer 3 — Streamlit Agent UI |
 
-------------------------------------------------------------------------
+**Total: 100%**
 
-### Member 1: Rohan Hashmi
+## Rohan Hashmi
+- tools.py — 4 agent tools (search_papers, get_paper_details, search_knowledge_graph, summarize_context)
+- tool_schemas.py — OpenAI-compatible schemas + TOOL_FUNCTIONS mapping
+- agent.py — ResearchAgent with tool-calling loop, chunk caching, MFA connection, CLI mode, fallbacks
+- task1_cursor_report.md — Cursor IDE analysis
+- README.md
 
-**Responsibilities:**
-- AI Agent Pipeline and Core Execution Loop
-- Google GenAI SDK integration (`backend/agent.py`)
-- Formulation of the LLM System Prompt dictating Tool Selection policies
-- Error handling integration ensuring seamless LLM re-attempts
+**Reflection:** Building the agent showed how tool-calling works — the LLM reads schemas and decides which function to call. Main challenge was Llama 3.2 being unreliable with schema adherence, requiring fallbacks and argument remapping.
 
-**Evidence (PR/commits):**
-- Implementation of `backend/agent.py`, managing `client.chats.create` states and tool integration.
-- Configured `.env` requirements and updated documentation for API setup.
+## Kenneth
+- task4_evaluation_report.md — 3 evaluation scenarios
+- Demo video (3-5 minutes)
 
-**Tested:**
-- Agent loop execution without failure; verified dynamic tool calling given specific prompts.
-
-------------------------------------------------------------------------
-
-### Member 2: Blake Simpson
-
-**Responsibilities:**
-- Agent Tool Interfaces and Python Callable Abstractions
-- Wrote `backend/tools.py` pulling logic from Lab 4 & 5
-- Configured three primary tools: `run_snowflake_query`, `get_database_schema`, and `search_knowledge_base`
-- Developed the three Evaluation Scenarios (Simple, Medium, Complex)
-- Recorded the Final Presentation and Demo Video showcasing the AI system
-
-**Evidence (PR/commits):**
-- Implementation of `backend/tools.py` with typed arguments and verbose docstrings.
-- Drafting of `task4_evaluation_report.md` metrics table.
-
-**Tested:**
-- Invoked `run_snowflake_query()` offline to confirm parsing of DataFrame into JSON format.
-
-------------------------------------------------------------------------
-
-### Member 3: Kenneth Kakie
-
-**Responsibilities:**
-- Front-End Chat Application Design
-- Refactored `app/streamlit_app.py` implementing a tab-based UI separating Lab 5 components from the new chat interface.
-- Programmed conversation history (`st.session_state.messages`) and interactive visual cues (`st.chat_message`, `st.spinner`).
-
-**Evidence (PR/commits):**
-- Updated `streamlit_app.py` adding full chat support with continuous connection state to `agent.py`.
-
-**Tested:**
-- Launched Streamlit locally and tested inputs, verifying correct UI display of agent thinking and markdown responses.
+## Blake
+- frontend/app.py — Streamlit chat UI with agent integration, conversation history, loading indicator, citations display

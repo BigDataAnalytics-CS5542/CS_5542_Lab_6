@@ -1,0 +1,49 @@
+[
+    {
+        "timestamp": "2026-03-02T00:11:08.524305",
+        "query": "How do additive models compare to nonparametric regression?",
+        "answer": "Additive models and nonparametric regression are two distinct approaches in statistical modeling. Additive models, as mentioned in the context [1], provide an important family of models for semiparametric regression or classification due to their increased flexibility compared to linear or generalized linear models, and increased interpretability compared to fully nonparametric models. This flexibility is largely attributed to the use of regularized kernel-based methods over a reproducing kernel Hilbert space (RKHS) [1].\n\nIn contrast, nonparametric regression models do not impose any specific structure on the relationship between the predictor variables and the response variable. Instead, they rely on the data to estimate the underlying function. However, nonparametric models can suffer from the curse of high dimensionality, where the number of predictor variables increases, leading to overfitting and poor generalization performance [1].\n\nOne key advantage of additive models is their ability to handle high-dimensional data without suffering from the curse of high dimensionality, thanks to the use of regularized kernel-based methods [1]. These methods are able to learn sparse representations of the data, which improves their statistical robustness.\n\nIn comparison, nonparametric regression models can be computationally expensive and may not provide interpretable results, especially when dealing with high-dimensional data [1]. However, nonparametric models can be useful when the relationship between the predictor variables and the response variable is complex and cannot be captured by a parametric model.\n\nIn terms of learning rates, additive models have been shown to have favorable performance compared to nonparametric models, especially in high-dimensional settings [2]. The learning rates for regularized kernel-based methods for additive models have been studied in [2], and it has been shown that these methods can achieve comparable or even better performance than recent results on optimal learning rates for purely nonparametric regularized kernel-based quantile regression.\n\nOverall, additive models offer a promising approach for semiparametric regression or classification, particularly in high-dimensional settings, due to their increased flexibility and interpretability. However, nonparametric regression models can still be useful in situations where the relationship between the predictor variables and the response variable is complex and cannot be captured by a parametric model.\n\nReferences:\n\n[1] arXiv Paper arxiv_000000\n[2] arXiv Paper arxiv_000000\n[3] arXiv Paper arxiv_000000\n[4] arXiv Paper arxiv_000396\n[5]",
+        "chunks": [
+            {
+                "chunk_id": "arxiv_000000_body_c000",
+                "paper_id": "arxiv_000000",
+                "title": "arXiv Paper arxiv_000000",
+                "section": "body",
+                "text": "additive models @xcite provide an important family of models for semiparametric regression or classification . some reasons for the success of additive models are their increased flexibility when comp",
+                "score": 0.5474451474569251
+            },
+            {
+                "chunk_id": "arxiv_000000_abstract_c000",
+                "paper_id": "arxiv_000000",
+                "title": "arXiv Paper arxiv_000000",
+                "section": "abstract",
+                "text": "additive models play an important role in semiparametric statistics . this paper gives learning rates for regularized kernel based methods for additive models . these learning rates compare favourably",
+                "score": 0.49480433384871747
+            },
+            {
+                "chunk_id": "arxiv_000000_body_c006",
+                "paper_id": "arxiv_000000",
+                "title": "arXiv Paper arxiv_000000",
+                "section": "body",
+                "text": "advantages of additive models , we provide two examples of comparing additive with product kernels . the first example deals with gaussian rbf kernels . all proofs will be given in section [ proofsect",
+                "score": 0.44489190332569106
+            },
+            {
+                "chunk_id": "arxiv_000396_body_c026",
+                "paper_id": "arxiv_000396",
+                "title": "arXiv Paper arxiv_000396",
+                "section": "body",
+                "text": "hollander , @xcite ) . * samaniego : * which ideas or results in your bayesian nonparametric papers seem to have had the most impact ? * hollander : * ramesh korwar and i had several interesting resul",
+                "score": 0.4069161665401049
+            },
+            {
+                "chunk_id": "arxiv_000396_body_c023",
+                "paper_id": "arxiv_000396",
+                "title": "arXiv Paper arxiv_000396",
+                "section": "body",
+                "text": ". * hollander : * in my early years at fsu i wrote nonparametric papers on bivariate symmetry , regression , uncorrelated nonparametric statistics , and did a little more on ordered alternatives . i a",
+                "score": 0.40191514343739543
+            }
+        ]
+    }
+]
