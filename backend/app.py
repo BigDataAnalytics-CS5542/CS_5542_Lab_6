@@ -7,6 +7,31 @@ from scripts.sf_connect import get_conn
 import json
 from datetime import datetime
 from pathlib import Path
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+# Import your agent class from wherever it is saved (e.g., agent.py)
+from agent import ResearchAgent
+
+app = FastAPI(title="CS 5542 Research Assistant API")
+
+print("=" * 60)
+print(" 1. Initializing Research Agent...")
+print("    (Please check terminal for Snowflake MFA prompt)")
+print("=" * 60)
+
+# Global instantiation: This blocks server startup to grab the OTP and connect
+agent = ResearchAgent()
+
+print("=" * 60)
+print(" 2. Pre-fetching vector chunks into memory...")
+print("=" * 60)
+# Cache chunks once so all subsequent queries are fast
+agent._prefetch_chunks()
+
+print("=" * 60)
+print(" ✅ Server is ready to accept requests!")
+print("=" * 60)
 
 app = FastAPI(title="Research Assistant API")
 @app.get("/")
@@ -49,59 +74,49 @@ def save_to_history(query_text: str, answer: str, citations: list):
 
 class QueryRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k: int = 5  # Maintained for frontend compatibility
 
 @app.post('/query')
 def query(req: QueryRequest):
-    start = time.time()
-    conn = get_conn(passcode=input("OTP : ").strip())
-    chunks = get_top_chunks(conn=conn, query_text=req.question, top_k=req.top_k)
-    # 1. Format each chunk to include its index, title, section, and text
-    formatted_chunks = []
-    for i, chunk in enumerate(chunks, start=1):
-        title = chunk[3]
-        section = chunk[4]
-        text = chunk[5]
-        
-        # Bundle the metadata with the text using a clear structure
-        formatted_string = f"[{i}] Paper Title: {title}\nSection: {section}\nText: {text}"
-        formatted_chunks.append(formatted_string)
+    """
+    Main endpoint called by the Streamlit frontend.
+    Passes the user's question to the agent and formats the output.
+    """
+    # 1. Run the agentic loop
+    agent_result = agent.run(req.question)
+    
+    # 2. Extract agent outputs
+    answer = agent_result.get("answer", "No answer generated.")
+    citations = agent_result.get("citations", [])
+    latency_ms = agent_result.get("latency_ms", 0)
 
-    # 2. Join the structured chunks with newlines to separate them clearly
-    context = '\n\n'.join(formatted_chunks)
-    print(context)
-   
-    model_id = "meta-llama/Llama-3.2-3B-Instruct"
-    client = InferenceClient(token=os.getenv('HF_TOKEN'))
-    messages = [{"role": "user", "content": f"Answer: {req.question}\nYou absolutely need to cite the context. You must cite the text excerpts using their bracketed index (e.g., \"This method is highly scalable [1].\" You don't need to list references at the end). Never invent facts, and never invent citations. Context: {context}"}]
+    print(f"\n\n\n\n\nCITATIONS :  :  {citations}")
     
-    response = client.chat_completion(
-        model=model_id,
-        messages=messages,
-        max_tokens=500
-    )
-    print(f"\n\n\n\n\n\n\n{response.choices[0].message.content}\n\n")
-    answer =response.choices[0].message.content
-    
+    # 3. Calculate confidence based on the top vector match score
+    confidence = round(citations[0].get("score", 0.0), 3) if citations else 0.0
+    print(f"\n\n\n\n\nCONFIDENCE :  :  {confidence}")
+
+    # 4. Map to the JSON structure expected by the frontend
     result = {
         'answer': answer,
-        'citations': [
-            {'chunk_id': c[1], 'paper_id': c[2], 'title': c[3],
-             'section': c[4], 'text': c[5][:200], 'score': c[0]}
-            for c in chunks
-        ],
-        'confidence': round(chunks[0][0], 3) if chunks else 0,
-        'retrieval_mode': 'vector',
-        'latency_ms': int((time.time() - start) * 1000)
-        }
-
-    save_to_history(
-        query_text=req.question, 
-        answer=result['answer'], 
-        citations=result['citations']
-    )
+        'citations': citations, 
+        'confidence': confidence,
+        'retrieval_mode': 'agentic', 
+        'latency_ms': latency_ms,
+        'tools_used': agent_result.get("tools_used", []),
+        'steps_taken': agent_result.get("steps", 0)
+    }
 
     return result
+
+@app.post('/reset')
+def reset_history():
+    """
+    Optional utility endpoint to clear the agent's conversation history
+    without needing to restart the server and re-enter the OTP.
+    """
+    agent.reset_history()
+    return {"status": "success", "message": "Agent history cleared."}
     
 
 @app.get('/papers')
