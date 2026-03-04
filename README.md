@@ -73,16 +73,17 @@ HF_TOKEN=your_huggingface_token
 
 > Data is already in Snowflake. Teammates do not need to run ingestion — just configure .env and run the agent or backend directly.
 
-### 3. Run the agent (CLI)
+### (optonal) 3. Run the agent as standalone program (CLI)
 ```bash
 python agent.py
 ```
 Prompts for Snowflake MFA once, pre-fetches all chunks, then accepts questions interactively.
 
-### 4. Start backend
+### 4. Start backend 
 ```bash
 uvicorn backend.app:app --reload --port 3001
 ```
+Make sure to enter OTP
 
 ### 5. Start frontend
 ```bash
