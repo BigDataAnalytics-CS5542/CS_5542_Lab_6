@@ -23,7 +23,7 @@ import numpy as np
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import InferenceClient
-import spacy
+
 import data.config as config
 
 load_dotenv()
@@ -161,8 +161,12 @@ def search_knowledge_graph(conn: Any, query: str, top_k: int = 10) -> list[dict]
         Returns empty list if no entities found.
     """
     try:
-        nlp = spacy.load(config.SPACY_MODEL)
-        doc = nlp(query)
+        try:
+            import spacy
+            nlp = spacy.load(config.SPACY_MODEL)
+            doc = nlp(query)
+        except ImportError:
+            return [{"error": "spacy is not installed in the current environment (requires Python <3.12). Please use a different environment."}]
 
         entities = []
         for ent in doc.ents:
