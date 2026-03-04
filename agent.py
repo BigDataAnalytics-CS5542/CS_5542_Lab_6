@@ -31,7 +31,6 @@ Never skip summarize_context. Never answer from your own knowledge.
 MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
 MAX_ITERATIONS = 6
 
-
 class ResearchAgent:
     def __init__(self, passcode: str = ""):
         print("[Agent] Connecting to Snowflake...")

@@ -101,9 +101,8 @@ def query(req: QueryRequest):
         citations=result['citations']
     )
 
-    return {
-        result
-    }
+    return result
+    
 
 @app.get('/papers')
 def papers():
